@@ -5,7 +5,8 @@
 # DOMAIN-KEYWORD: 0
 # DOMAIN-SUFFIX: 4
 # TOTAL: 5
-- DOMAIN-SUFFIX,cnpc
-- DOMAIN-SUFFIX,petrochina
-- DOMAIN-SUFFIX,cnpc.com.cn
-- DOMAIN-SUFFIX,klszkj.com
+payload:
+  - DOMAIN-SUFFIX,cnpc
+  - DOMAIN-SUFFIX,petrochina
+  - DOMAIN-SUFFIX,cnpc.com.cn
+  - DOMAIN-SUFFIX,klszkj.com
