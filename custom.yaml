@@ -6,6 +6,8 @@
 # TOTAL: 43
 payload:
   - DOMAIN-SUFFIX,sis001.com
+  - DOMAIN-SUFFIX,6park.com
+  - DOMAIN-SUFFIX,xwbo.com
   - DOMAIN-SUFFIX,kelee.one
   - DOMAIN-SUFFIX,hkpic.net
   - DOMAIN-SUFFIX,v2ex.com
