@@ -16,6 +16,9 @@ payload:
   - DOMAIN-SUFFIX,qpic.ws
   - DOMAIN-SUFFIX,imgur.com
   - DOMAIN-SUFFIX,imgurinc.com
+  - DOMAIN-SUFFIX,6park.com
+  - DOMAIN-SUFFIX,xwbo.com
+  - DOMAIN-SUFFIX,6parkbbs.com
   - DOMAIN-SUFFIX,gitbook.com
   - DOMAIN-SUFFIX,gitbook.io
   - DOMAIN-SUFFIX,gitbook.zendesk.com
