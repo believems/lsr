@@ -1,9 +1,9 @@
 # NAME: CustomLSR-proxy
 # AUTHOR: believems
-# UPDATED: 2025-12-13 15:11:35
+# UPDATED: 2025-12-13 23:39:21
 # DOMAIN-KEYWORD: 1
-# DOMAIN-SUFFIX: 44
-# TOTAL: 45
+# DOMAIN-SUFFIX: 47
+# TOTAL: 48
 DOMAIN-SUFFIX,6park.com
 DOMAIN-SUFFIX,atom.io
 DOMAIN-SUFFIX,cool18.com
@@ -40,12 +40,15 @@ DOMAIN-SUFFIX,npm.community
 DOMAIN-SUFFIX,npmjs.com
 DOMAIN-SUFFIX,npmjs.org
 DOMAIN-SUFFIX,opensource.guide
+DOMAIN-SUFFIX,popo8.com
 DOMAIN-SUFFIX,qpic.ws
 DOMAIN-SUFFIX,rawgit.com
 DOMAIN-SUFFIX,rawgithub.com
 DOMAIN-SUFFIX,repo.new
+DOMAIN-SUFFIX,sendvid.com
 DOMAIN-SUFFIX,sis001.com
 DOMAIN-SUFFIX,thegithubshop.com
 DOMAIN-SUFFIX,txtnovel.vip
+DOMAIN-SUFFIX,ucar9.com
 DOMAIN-SUFFIX,v2ex.com
 DOMAIN-SUFFIX,xwbo.com

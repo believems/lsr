@@ -34,12 +34,15 @@
 ||npmjs.com^
 ||npmjs.org^
 ||opensource.guide^
+||popo8.com^
 ||qpic.ws^
 ||rawgit.com^
 ||rawgithub.com^
 ||repo.new^
+||sendvid.com^
 ||sis001.com^
 ||thegithubshop.com^
 ||txtnovel.vip^
+||ucar9.com^
 ||v2ex.com^
 ||xwbo.com^

@@ -1,6 +1,6 @@
 {
   "version": 3,
-  "updated": "2025-12-13 15:11:35",
+  "updated": "2025-12-13 23:39:21",
   "rules": [
     {
       "domain_keyword": [
@@ -42,13 +42,16 @@
         "npmjs.com",
         "npmjs.org",
         "opensource.guide",
+        "popo8.com",
         "qpic.ws",
         "rawgit.com",
         "rawgithub.com",
         "repo.new",
+        "sendvid.com",
         "sis001.com",
         "thegithubshop.com",
         "txtnovel.vip",
+        "ucar9.com",
         "v2ex.com",
         "xwbo.com"
       ]
