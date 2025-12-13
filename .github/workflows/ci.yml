@@ -1,4 +1,4 @@
-name: Domain Filter CI
+name: LSR CI
 
 on:
   push:
@@ -21,6 +21,26 @@ jobs:
       actions: write       # 允许删除 workflow 运行记录
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # 获取完整历史以便提交
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests aiohttp  # 添加 aiohttp 依赖以支持异步下载
+
+      - name: Run filter script
+        run: |
+          python converter.py
+        continue-on-error: false  # 脚本失败时停止工作流
+
       - name: Download and setup Mihomo
         run: |
           wget https://github.com/MetaCubeX/mihomo/releases/download/v${{ env.MIHOMO_VERSION }}/mihomo-linux-amd64-v${{ env.MIHOMO_VERSION }}.gz
@@ -31,7 +51,6 @@ jobs:
       - name: Convert Clash YAML to MRS
         run: |
           for yaml_file in rules/*/clash.yaml; do
-            echo "file $yaml_file will process..."
             if [ -f "$yaml_file" ]; then
               mrs_file="${yaml_file%.yaml}.mrs"
               ./mihomo convert-ruleset domain yaml "$yaml_file" "$mrs_file"
@@ -47,6 +66,31 @@ jobs:
       - name: Clean up Mihomo
         run: |
           rm -rf mihomo*
+
+      - name: Verify output files
+        run: |
+          echo "检查输出文件："
+          ls -lR rules/
+          for group_dir in rules/*; do
+            if [ -d "$group_dir" ]; then
+              group=$(basename "$group_dir")
+              echo "检查组：$group"
+              if [ -f "$group_dir/clash.yaml" ]; then
+                echo "找到 Clash YAML 文件：$group_dir/clash.yaml"
+                head -n 5 "$group_dir/clash.yaml"
+              else
+                echo "错误：未找到 $group_dir/clash.yaml" >&2
+                exit 1
+              fi
+              if [ -f "$group_dir/clash.mrs" ]; then
+                echo "找到 MRS 文件：$group_dir/clash.mrs"
+                head -n 5 "$group_dir/clash.mrs"
+              else
+                echo "错误：未找到 $group_dir/clash.mrs" >&2
+                exit 1
+              fi
+            fi
+          done
 
       - name: Commit and push changes
         run: |
