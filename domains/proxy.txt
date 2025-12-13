@@ -43,3 +43,6 @@ rawgithub.com
 repo.new
 thegithubshop.com
 github
+ucar9.com
+popo8.com
+sendvid.com
