@@ -1,0 +1,17 @@
+{
+  "version": 3,
+  "updated": "2025-12-13 22:42:28",
+  "rules": [
+    {
+      "domain_keyword": [
+        "cnpc",
+        "petrochina"
+      ],
+      "domain_suffix": [
+        "cnpc.com.cn",
+        "klszkj.com",
+        "ledupeiyou.com"
+      ]
+    }
+  ]
+}

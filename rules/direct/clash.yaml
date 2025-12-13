@@ -1,9 +1,12 @@
-# NAME: CustomLSR-direct
+# NAME: direct
 # AUTHOR: believems
-# REPO: https://github.com/believems/lsr
-# UPDATED: 2025-10-17 10:09:19
-# DOMAIN-KEYWORD: 0
-# DOMAIN-SUFFIX: 4
+# UPDATED: 2025-12-13 22:42:28
+# DOMAIN-KEYWORD: 2
+# DOMAIN-SUFFIX: 3
 # TOTAL: 5
 payload:
+  - DOMAIN-KEYWORD,cnpc
+  - DOMAIN-SUFFIX,cnpc.com.cn
+  - DOMAIN-SUFFIX,klszkj.com
   - DOMAIN-SUFFIX,ledupeiyou.com
+  - DOMAIN-KEYWORD,petrochina
