@@ -1,0 +1,70 @@
+name: Domain Filter CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    - cron: '0 0 * * *'  # 每天 UTC 00:00 运行
+  workflow_dispatch:
+
+env:
+  MIHOMO_VERSION: 1.19.12  # Mihomo 版本
+
+jobs:
+  build-and-commit:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write      # 允许推送文件到仓库
+      pull-requests: write # 允许操作 Pull Request
+      actions: write       # 允许删除 workflow 运行记录
+
+    steps:
+      - name: Download and setup Mihomo
+        run: |
+          wget https://github.com/MetaCubeX/mihomo/releases/download/v${{ env.MIHOMO_VERSION }}/mihomo-linux-amd64-v${{ env.MIHOMO_VERSION }}.gz
+          gzip -d mihomo-linux-amd64-v${{ env.MIHOMO_VERSION }}.gz
+          chmod +x mihomo-linux-amd64-v${{ env.MIHOMO_VERSION }}
+          mv mihomo-linux-amd64-v${{ env.MIHOMO_VERSION }} mihomo
+
+      - name: Convert Clash YAML to MRS
+        run: |
+          for yaml_file in rules/*/clash.yaml; do
+            if [ -f "$yaml_file" ]; then
+              mrs_file="${yaml_file%.yaml}.mrs"
+              ./mihomo convert-ruleset domain yaml "$yaml_file" "$mrs_file"
+              if [ -f "$mrs_file" ]; then
+                echo "成功转换：$mrs_file"
+              else
+                echo "错误：无法生成 $mrs_file" >&2
+                exit 1
+              fi
+            fi
+          done
+
+      - name: Clean up Mihomo
+        run: |
+          rm -rf mihomo*
+
+      - name: Commit and push changes
+        run: |
+          git config user.name "GitHub Actions Bot"
+          git config user.email "actions@github.com"
+          git add OUTPUT/*/*
+          if git diff --staged --quiet; then
+            echo "没有文件变更，无需提交"
+          else
+            git commit -m "更新过滤后的域名文件和 MRS 文件 [自动生成]"
+            git push origin main
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Delete Workflow Runs
+        uses: Mattraks/delete-workflow-runs@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          retain_days: 1
+          keep_minimum_runs: 1
