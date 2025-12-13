@@ -31,6 +31,7 @@ jobs:
       - name: Convert Clash YAML to MRS
         run: |
           for yaml_file in rules/*/clash.yaml; do
+            echo "file $yaml_file will process..."
             if [ -f "$yaml_file" ]; then
               mrs_file="${yaml_file%.yaml}.mrs"
               ./mihomo convert-ruleset domain yaml "$yaml_file" "$mrs_file"
