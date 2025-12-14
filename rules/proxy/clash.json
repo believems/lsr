@@ -1,6 +1,6 @@
 {
   "version": 3,
-  "updated": "2025-12-14 01:23:04",
+  "updated": "2025-12-14 09:36:37",
   "rules": [
     {
       "domain_keyword": [
@@ -9,6 +9,7 @@
       "domain_suffix": [
         "6park.com",
         "atom.io",
+        "brew.sh",
         "cool18.com",
         "dependabot.com",
         "ghcr.io",

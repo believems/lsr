@@ -1,5 +1,6 @@
 ||6park.com^
 ||atom.io^
+||brew.sh^
 ||cool18.com^
 ||dependabot.com^
 ||ghcr.io^
