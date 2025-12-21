@@ -7,7 +7,7 @@
 
 输入:
   - domains目录下的txt文件，每个文件名为组名
-  - 支持格式: AdBlock (||example.com^), Hosts (0.0.0.0 example.com), 纯域名, 带通配符域名
+  - 支持格式: AdBlock (||example.com^), Hosts (0.0.0.0 example.com), 纯域名, 带通配符域名、IP地址、IP地址范围
 
 输出格式:
   1. AdBlock格式 (adblock.txt)
@@ -50,13 +50,12 @@
 # 基础导入
 import re
 import time
-import hashlib
 import logging
 import sys
 from pathlib import Path
 
 # 类型提示
-from typing import List, Set, Dict, Optional
+from typing import List, Set, Dict, Optional, Tuple, Iterator
 
 # 并发处理
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -82,18 +81,23 @@ DOMAINS_DIR = Path("domains")
 
 # 移除黑白名单配置，直接使用domains目录下的所有文件
 
-def log(message: str, critical: bool = False) -> None:
+def log_info(message: str) -> None:
     """
-    记录日志信息
+    记录信息级别日志
     
     参数:
         message: 要记录的日志消息
-        critical: 是否为错误级别日志，默认为False(信息级别)
     """
-    if critical:
-        logger.error(message)
-    else:
-        logger.info(message)
+    logger.info(message)
+
+def log_error(message: str) -> None:
+    """
+    记录错误级别日志
+    
+    参数:
+        message: 要记录的日志消息
+    """
+    logger.error(message)
 
 def sanitize(name: str) -> Optional[str]:
     """
