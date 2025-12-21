@@ -11,6 +11,7 @@ on:
 
 env:
   MIHOMO_VERSION: 1.19.12  # Mihomo 版本
+  SING_BOX_VERSION: 1.12.13  # Sing-Box 版本
 
 jobs:
   build-and-commit:
@@ -43,7 +44,14 @@ jobs:
           chmod +x mihomo-linux-amd64-v${{ env.MIHOMO_VERSION }}
           mv mihomo-linux-amd64-v${{ env.MIHOMO_VERSION }} mihomo
 
-      - name: Convert YAML to MRS
+      - name: Download and setup Sing-box
+        run: |
+          wget https://github.com/SagerNet/sing-box/releases/download/v${{ env.SING_BOX_VERSION }}/sing-box-${{ env.SING_BOX_VERSION }}-linux-amd64.tar.gz
+          tar -zxf sing-box-${{ env.SING_BOX_VERSION }}-linux-amd64.tar.gz -C ./
+          chmod +x sing-box-${{ env.SING_BOX_VERSION }}-linux-amd64/sing-box
+          mv sing-box-${{ env.SING_BOX_VERSION }}-linux-amd64/sing-box  sing-box
+
+      - name: Convert YAML to MRS, SRS
         run: |
           # 转换domain.yaml为domain.mrs
           for yaml_file in rules/*/domain.yaml; do
@@ -73,9 +81,24 @@ jobs:
             fi
           done
 
-      - name: Clean up Mihomo
+          # 转换singbox.json为singbox.srs
+          for json_file in rules/*/singbox.json; do
+            if [ -f "$json_file" ]; then
+              srs_file="${json_file%.json}.srs"
+              ./sing-box rule-set compile --output "$srs_file" "$json_file"
+              if [ -f "$srs_file" ]; then
+                echo "成功转换：$srs_file"
+              else
+                echo "错误：无法生成 $srs_file" >&2
+                exit 1
+              fi
+            fi
+          done
+
+      - name: Clean up Mihomo, Sing-box
         run: |
           rm -rf mihomo*
+          rm -rf sing-box*
 
       - name: Verify output files
         run: |
@@ -111,6 +134,13 @@ jobs:
                 fi
               else
                 echo "未找到 IPCIDR YAML 文件：$group_dir/ipcidr.yaml (可选)"
+              fi
+              if [ -f "$group_dir/singbox.srs" ]; then
+                echo "找到 SingBox SRS 文件：$group_dir/singbox.srs"
+                head -n 5 "$group_dir/singbox.srs"
+              else
+                echo "错误：未找到 $group_dir/singbox.srs" >&2
+                exit 1
               fi
             fi
           done

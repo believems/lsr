@@ -12,6 +12,7 @@
 输出格式:
   1. AdBlock格式 (adblock.txt)
      - AdBlock拦截规则格式，以||开头，^结尾
+     - 包含文件头信息
   
   2. Classical格式:
      - classical.yaml - Clash Classical YAML格式
@@ -19,21 +20,33 @@
        - 规则格式: DOMAIN-SUFFIX,example.com 或 DOMAIN-KEYWORD,keyword 或 IP-CIDR,192.168.1.0/24
        - 带payload:前缀
      - classical.txt - Clash Classical文本格式
-       - 与yaml格式内容相同，但不包含文件头
+       - 与yaml格式内容相同
+       - 包含文件头信息
   
   3. Domain格式:
      - domain.yaml - Domain YAML格式
        - 仅包含域名，不包含IP地址
        - 格式: payload: - '.example.com'
+       - 包含文件头信息
      - domain.txt - Domain文本格式
        - 仅包含域名，每行一个，格式: .example.com
+       - 包含文件头信息
   
   4. IPCIDR格式:
      - ipcidr.yaml - IPCIDR YAML格式
        - 仅包含IP地址和CIDR范围
        - 格式: payload: - '192.168.1.0/24'
+       - 包含文件头信息
+       - 仅在存在IP地址/CIDR范围时生成
      - ipcidr.txt - IPCIDR文本格式
        - 仅包含IP地址和CIDR范围，每行一个
+       - 包含文件头信息
+       - 仅在存在IP地址/CIDR范围时生成
+
+  5. sing-box格式 (singbox.json)
+     - sing-box配置文件，使用version 3
+     - 自动省略空的规则列表
+     - 规则格式: {"domain_keyword": [...], "domain_suffix": [...], "ip_cidr": [...]} 
 
 输出目录:
   - rules/<组名>/
@@ -45,6 +58,8 @@
   - 仅处理domains目录下的.txt文件
   - 自动去重和去除子域名
   - 并行处理提高效率
+  - 所有输出文件包含标准注释头: NAME, AUTHOR, TYPE, UPDATED, TOTAL
+  - Classical格式额外包含DOMAIN-KEYWORD和DOMAIN-SUFFIX统计
 """
 
 # 基础导入
@@ -53,6 +68,7 @@ import time
 import datetime
 import logging
 import sys
+import json
 from pathlib import Path
 from typing import List, Set, Dict, Optional, Tuple, Iterator
 import os
@@ -82,26 +98,14 @@ RULEGROUP_WORKERS = 8     # 文件处理的最大并行数
 # 本地文件配置
 DOMAINS_DIR = Path("domains")
 
+# 预编译正则表达式，避免重复编译提高性能
+# IP-CIDR格式正则表达式（支持IPv4和IPv6）
+# 匹配格式: 127.0.0.1, 192.168.1.0/24, 2001:db8::, 2001:db8::/32, ::1, fe80::/64, ::ffff:192.0.2.1
+IP_CIDR_PATTERN = re.compile(r'^((?:\d+\.){3}\d+(?:/\d+)?|(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}(?:/\d+)?|(?:[0-9a-fA-F]{1,4}:){1,7}:|(?:[0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}(?:/\d+)?|(?:[0-9a-fA-F]{1,4}:){1,5}(?::[0-9a-fA-F]{1,4}){1,2}(?:/\d+)?|(?:[0-9a-fA-F]{1,4}:){1,4}(?::[0-9a-fA-F]{1,4}){1,3}(?:/\d+)?|(?:[0-9a-fA-F]{1,4}:){1,3}(?::[0-9a-fA-F]{1,4}){1,4}(?:/\d+)?|(?:[0-9a-fA-F]{1,4}:){1,2}(?::[0-9a-fA-F]{1,4}){1,5}(?:/\d+)?|[0-9a-fA-F]{1,4}:(?:(?::[0-9a-fA-F]{1,4}){1,6})(?:/\d+)?|:(?:(?::[0-9a-fA-F]{1,4}){1,7}|:)(?:/\d+)?|fe80:(?::[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}(?:/\d+)?)$')
 
 # 移除黑白名单配置，直接使用domains目录下的所有文件
 
-def log_info(message: str) -> None:
-    """
-    记录信息级别日志
-    
-    参数:
-        message: 要记录的日志消息
-    """
-    logger.info(message)
 
-def log_error(message: str) -> None:
-    """
-    记录错误级别日志
-    
-    参数:
-        message: 要记录的日志消息
-    """
-    logger.error(message)
 
 def sanitize(name: str) -> Optional[str]:
     """
@@ -118,6 +122,49 @@ def sanitize(name: str) -> Optional[str]:
     # 保留字母、数字、中文和部分符号，替换其他为下划线
     return re.sub(r'[^\w\u4e00-\u9fa5\-_\.]', '_', name).strip('_')
 
+def get_current_time() -> str:
+    """
+    获取当前时间的中国标准时间（CST）格式
+    
+    返回:
+        格式化的当前时间字符串，格式为：YYYY-MM-DD HH:MM:SS CST
+    """
+    # 中国标准时间比UTC时间快8小时
+    return (datetime.datetime.utcnow() + datetime.timedelta(hours=8)).strftime("%Y-%m-%d %H:%M:%S CST")
+
+def generate_header(name: str, type: str, updated: str, total: int, 
+                   domain_keyword_count: int = None, domain_suffix_count: int = None) -> List[str]:
+    """
+    生成文件头信息
+    
+    参数:
+        name: 规则组名称
+        type: 输出格式类型 (adblock, classical, domain, ipcidr)
+        updated: 更新时间
+        total: 总规则数量
+        domain_keyword_count: 域名关键词数量 (仅classical格式需要)
+        domain_suffix_count: 域名后缀数量 (仅classical格式需要)
+    
+    返回:
+        文件头行列表
+    """
+    header = [
+        f"# NAME: {name}",
+        "# AUTHOR: believems",
+        f"# TYPE: {type}",
+        f"# UPDATED: {updated}"
+    ]
+    
+    # Classical格式需要额外的统计信息
+    if type == "classical" and domain_keyword_count is not None and domain_suffix_count is not None:
+        header.extend([
+            f"# DOMAIN-KEYWORD: {domain_keyword_count}",
+            f"# DOMAIN-SUFFIX: {domain_suffix_count}"
+        ])
+    
+    header.append(f"# TOTAL: {total}")
+    return header
+
 def read_local_file(file_path: str) -> List[str]:
     """
     读取本地文件内容并返回非空行列表
@@ -132,7 +179,7 @@ def read_local_file(file_path: str) -> List[str]:
         with open(file_path, "r", encoding="utf-8") as f:
             return [line.rstrip('\n') for line in f if line.strip()]
     except Exception as e:
-        log_error(f"读取文件失败 {file_path}: {e}", critical=True)
+        logger.error(f"读取文件失败 {file_path}: {e}")
         return []
 
 def read_all_files(file_paths: List[str]) -> Dict[str, List[str]]:
@@ -156,9 +203,9 @@ def read_all_files(file_paths: List[str]) -> Dict[str, List[str]]:
             try:
                 content = future.result()
                 results[file_path] = content
-                log_info(f"读取完成: {file_path} ({len(content)}行)")
+                logger.info(f"读取完成: {file_path} ({len(content)}行)")
             except Exception as e:
-                log_error(f"读取异常: {file_path} - {str(e)[:100]}", critical=True)
+                logger.error(f"读取异常: {file_path} - {str(e)[:100]}")
     
     return results
 
@@ -184,11 +231,12 @@ def extract_domain(line: str) -> Optional[str]:
     if not line or line.startswith('#'):
         return None
     
-    # 匹配IP-CIDR格式: 127.0.0.0/8
-    ip_cidr_pattern = r'^(\d+\.\d+\.\d+\.\d+(?:/\d+)?)$'
-    ip_cidr_match = re.match(ip_cidr_pattern, line)
+    # 使用预编译的IP-CIDR正则表达式匹配IP地址或CIDR范围
+    # 支持IPv4格式: 127.0.0.1, 192.168.1.0/24
+    # 支持IPv6格式: 2001:db8::, 2001:0db8:85a3:0000:0000:8a2e:0370:7334, ::1/128
+    ip_cidr_match = IP_CIDR_PATTERN.match(line)
     if ip_cidr_match:
-        return ip_cidr_match.group(1)
+        return ip_cidr_match.group(1).lower()
     
     # 匹配各种规则格式的正则表达式
     patterns = [
@@ -293,7 +341,7 @@ def remove_subdomains(domains: Set[str]) -> Set[str]:
         if not any(parent in keep for parent in get_parent_domains(domain)):
             keep.add(domain)
     
-    log_info(f"去重: 输入{len(domains)} → 输出{len(keep)}")
+    logger.info(f"去重: 输入{len(domains)} → 输出{len(keep)}")
     return keep
 
 
@@ -313,19 +361,18 @@ def save_domains_to_files(domains: Set[str], output_path: Path, group_name: str)
         3. classical.txt - Clash Classical格式文本
         4. domain.yaml - Domain格式YAML
         5. domain.txt - Domain格式文本
-        6. ipcidr.yaml - IPCIDR格式YAML
-        7. ipcidr.txt - IPCIDR格式文本
+        6. ipcidr.yaml - IPCIDR格式YAML (仅当存在IP地址/CIDR时)
+        7. ipcidr.txt - IPCIDR格式文本 (仅当存在IP地址/CIDR时)
+        8. singbox.json - sing-box配置文件
     
     处理逻辑:
         - 将输入的域名集合按类型分类: IP地址/CIDR范围、完整域名、关键词
-        - IP地址/CIDR范围: 输出到Classical和IPCIDR格式文件
-        - 完整域名: 输出到所有格式文件
-        - 关键词: 输出到所有格式文件
-        - IPCIDR格式文件仅在存在IP地址/CIDR范围时生成
+        - 生成各种格式的输出文件
         - 所有输出文件包含标准注释头: NAME, AUTHOR, TYPE, UPDATED, TOTAL
+        - sing-box配置文件使用version 3，并自动省略空的规则列表
     """
     if not domains:
-        log_error(f"无域名保存: {output_path}")
+        logger.error(f"无域名保存: {output_path}")
         return
     
     sorted_domains = sorted(domains)
@@ -333,48 +380,36 @@ def save_domains_to_files(domains: Set[str], output_path: Path, group_name: str)
     group_dir.mkdir(parents=True, exist_ok=True)
     
     # 使用当前时间作为更新时间（中国标准时间）
-    # 中国标准时间比UTC时间快8小时
-    current_time = (datetime.datetime.utcnow() + datetime.timedelta(hours=8)).strftime("%Y-%m-%d %H:%M:%S CST")
+    current_time = get_current_time()
     
-    # 保存AdBlock格式
-    adblock_path = group_dir / "adblock.txt"
-    with open(adblock_path, "w", encoding="utf-8") as f:
-        # 添加注释头
-        f.write(f"# NAME: {group_name}\n")
-        f.write("# AUTHOR: believems\n")
-        f.write("# TYPE: adblock\n")
-        f.write(f"# UPDATED: {current_time}\n")
-        f.write(f"# TOTAL: {len(sorted_domains)}\n")
-        # 写入规则内容
-        f.write('\n'.join(f"||{d}^" for d in sorted_domains))
-    log_info(f"保存AdBlock: {adblock_path} ({len(sorted_domains)}域名)")
-    
-    # 统计DOMAIN-KEYWORD和DOMAIN-SUFFIX的数量
+    # 按类型分类域名并构建各种格式的规则列表
     domain_keyword_count = 0
     domain_suffix_count = 0
     classical_lines = []
     classical_yaml_lines = []
     domain_lines = []
     domain_yaml_lines = []
-    # IPCIDR格式专用列表，仅存储IP地址和CIDR范围
     ipcidr_lines = []
     ipcidr_yaml_lines = []
     
+    # 用于sing-box配置的分类（仅保留非空列表）
+    singbox_rule = {}
+    
     for d in sorted_domains:
-        # 使用正则表达式检测是否为IP地址或CIDR范围
-        # 匹配格式: 192.168.1.1 或 192.168.1.0/24
-        is_ip_or_cidr = bool(re.match(r'^\d+\.\d+\.\d+\.\d+(?:/\d+)?$', d))
+        is_ip_or_cidr = bool(IP_CIDR_PATTERN.match(d))
         
         if is_ip_or_cidr:
             # IP地址或CIDR范围处理
-            # 添加到Classical格式
             classical_lines.append(f"IP-CIDR,{d}")
             classical_yaml_lines.append(f"  - IP-CIDR,{d}")
-            # IP地址不计入Domain统计
             domain_suffix_count += 1
-            # 添加到IPCIDR格式专用列表
-            ipcidr_lines.append(f"{d}")
+            ipcidr_lines.append(d)
             ipcidr_yaml_lines.append(f"  - '{d}'")
+            
+            # 动态添加到sing-box配置
+            if "ip_cidr" not in singbox_rule:
+                singbox_rule["ip_cidr"] = []
+            singbox_rule["ip_cidr"].append(d)
         elif '.' in d:
             # 包含点号的是完整域名，使用DOMAIN-SUFFIX
             classical_lines.append(f"DOMAIN-SUFFIX,{d}")
@@ -382,103 +417,91 @@ def save_domains_to_files(domains: Set[str], output_path: Path, group_name: str)
             domain_lines.append(f".{d}")
             domain_yaml_lines.append(f"  - '.{d}'")
             domain_suffix_count += 1
+            
+            # 动态添加到sing-box配置
+            if "domain_suffix" not in singbox_rule:
+                singbox_rule["domain_suffix"] = []
+            singbox_rule["domain_suffix"].append(d)
         else:
             # 不包含点号的是关键词，使用DOMAIN-KEYWORD
             classical_lines.append(f"DOMAIN-KEYWORD,{d}")
             classical_yaml_lines.append(f"  - DOMAIN-KEYWORD,{d}")
-            # 关键词在domain格式中直接使用
-            domain_lines.append(f"{d}")
+            domain_lines.append(d)
             domain_yaml_lines.append(f"  - '{d}'")
             domain_keyword_count += 1
+            
+            # 动态添加到sing-box配置
+            if "domain_keyword" not in singbox_rule:
+                singbox_rule["domain_keyword"] = []
+            singbox_rule["domain_keyword"].append(d)
     
     total_count = domain_keyword_count + domain_suffix_count
     
-    # 保存Classical YAML格式（原clash.yaml）
-    classical_yaml_path = group_dir / "classical.yaml"
-    with open(classical_yaml_path, "w", encoding="utf-8") as f:
-        # 添加自定义文件头，NAME使用文件名（无后缀）
-        f.write(f"# NAME: {group_name}\n")
-        f.write("# AUTHOR: believems\n")
-        f.write("# TYPE: classical\n")
-        f.write(f"# UPDATED: {current_time}\n")
-        f.write(f"# DOMAIN-KEYWORD: {domain_keyword_count}\n")
-        f.write(f"# DOMAIN-SUFFIX: {domain_suffix_count}\n")
-        f.write(f"# TOTAL: {total_count}\n")
-        # 写入payload内容
-        f.write("payload:\n")
-        f.write('\n'.join(classical_yaml_lines))
-    log_info(f"保存Classical YAML: {classical_yaml_path} ({len(sorted_domains)}域名)")
+    # 保存AdBlock格式
+    adblock_content = '\n'.join(generate_header(group_name, "adblock", current_time, len(sorted_domains))) + '\n'
+    adblock_content += '\n'.join(f"||{d}^" for d in sorted_domains)
+    (group_dir / "adblock.txt").write_text(adblock_content, encoding="utf-8")
+    logger.info(f"保存AdBlock: {group_dir / 'adblock.txt'} ({len(sorted_domains)}域名)")
     
-    # 保存Classical TXT格式
-    classical_txt_path = group_dir / "classical.txt"
-    with open(classical_txt_path, "w", encoding="utf-8") as f:
-        # 添加注释头
-        f.write(f"# NAME: {group_name}\n")
-        f.write("# AUTHOR: believems\n")
-        f.write("# TYPE: classical\n")
-        f.write(f"# UPDATED: {current_time}\n")
-        f.write(f"# DOMAIN-KEYWORD: {domain_keyword_count}\n")
-        f.write(f"# DOMAIN-SUFFIX: {domain_suffix_count}\n")
-        f.write(f"# TOTAL: {total_count}\n")
-        # 写入规则内容
-        f.write('\n'.join(classical_lines))
-    log_info(f"保存Classical TXT: {classical_txt_path} ({len(sorted_domains)}域名)")
+    # 保存Classical格式
+    classical_header = '\n'.join(generate_header(group_name, "classical", current_time, total_count,
+                                                domain_keyword_count, domain_suffix_count)) + '\n'
     
-    # 保存Domain YAML格式
-    domain_yaml_path = group_dir / "domain.yaml"
-    with open(domain_yaml_path, "w", encoding="utf-8") as f:
-        # 添加自定义文件头
-        f.write(f"# NAME: {group_name}\n")
-        f.write("# AUTHOR: believems\n")
-        f.write("# TYPE: domain\n")
-        f.write(f"# UPDATED: {current_time}\n")
-        f.write(f"# TOTAL: {total_count}\n")
-        # 写入payload内容
-        f.write("payload:\n")
-        f.write('\n'.join(domain_yaml_lines))
-    log_info(f"保存Domain YAML: {domain_yaml_path} ({len(sorted_domains)}域名)")
+    # Classical YAML
+    classical_yaml_content = classical_header + "payload:\n" + '\n'.join(classical_yaml_lines)
+    (group_dir / "classical.yaml").write_text(classical_yaml_content, encoding="utf-8")
+    logger.info(f"保存Classical YAML: {group_dir / 'classical.yaml'} ({len(sorted_domains)}域名)")
     
-    # 保存Domain TXT格式
-    domain_txt_path = group_dir / "domain.txt"
-    with open(domain_txt_path, "w", encoding="utf-8") as f:
-        # 添加注释头
-        f.write(f"# NAME: {group_name}\n")
-        f.write("# AUTHOR: believems\n")
-        f.write("# TYPE: domain\n")
-        f.write(f"# UPDATED: {current_time}\n")
-        f.write(f"# TOTAL: {total_count}\n")
-        # 写入规则内容
-        f.write('\n'.join(domain_lines))
-    log_info(f"保存Domain TXT: {domain_txt_path} ({len(sorted_domains)}域名)")
+    # Classical TXT
+    classical_txt_content = classical_header + '\n'.join(classical_lines)
+    (group_dir / "classical.txt").write_text(classical_txt_content, encoding="utf-8")
+    logger.info(f"保存Classical TXT: {group_dir / 'classical.txt'} ({len(sorted_domains)}域名)")
     
-    # 保存IPCIDR YAML格式
+    # 保存Domain格式
+    domain_header = '\n'.join(generate_header(group_name, "domain", current_time, total_count)) + '\n'
+    
+    # Domain YAML
+    domain_yaml_content = domain_header + "payload:\n" + '\n'.join(domain_yaml_lines)
+    (group_dir / "domain.yaml").write_text(domain_yaml_content, encoding="utf-8")
+    logger.info(f"保存Domain YAML: {group_dir / 'domain.yaml'} ({len(sorted_domains)}域名)")
+    
+    # Domain TXT
+    domain_txt_content = domain_header + '\n'.join(domain_lines)
+    (group_dir / "domain.txt").write_text(domain_txt_content, encoding="utf-8")
+    logger.info(f"保存Domain TXT: {group_dir / 'domain.txt'} ({len(sorted_domains)}域名)")
+    
+    # 保存IPCIDR格式文件（仅当存在IP地址/CIDR范围时）
     if ipcidr_lines:
-        ipcidr_yaml_path = group_dir / "ipcidr.yaml"
-        with open(ipcidr_yaml_path, "w", encoding="utf-8") as f:
-            # 添加自定义文件头
-            f.write(f"# NAME: {group_name}\n")
-            f.write("# AUTHOR: believems\n")
-            f.write("# TYPE: ipcidr\n")
-            f.write(f"# UPDATED: {current_time}\n")
-            f.write(f"# TOTAL: {len(ipcidr_lines)}\n")
-            # 写入payload内容
-            f.write("payload:\n")
-            f.write('\n'.join(ipcidr_yaml_lines))
-        log_info(f"保存IPCIDR YAML: {ipcidr_yaml_path} ({len(ipcidr_lines)}条目)")
+        ipcidr_header = '\n'.join(generate_header(group_name, "ipcidr", current_time, len(ipcidr_lines))) + '\n'
+        
+        # IPCIDR YAML
+        ipcidr_yaml_content = ipcidr_header + "payload:\n" + '\n'.join(ipcidr_yaml_lines)
+        (group_dir / "ipcidr.yaml").write_text(ipcidr_yaml_content, encoding="utf-8")
+        logger.info(f"保存IPCIDR YAML: {group_dir / 'ipcidr.yaml'} ({len(ipcidr_lines)}条目)")
+        
+        # IPCIDR TXT
+        ipcidr_txt_content = ipcidr_header + '\n'.join(ipcidr_lines)
+        (group_dir / "ipcidr.txt").write_text(ipcidr_txt_content, encoding="utf-8")
+        logger.info(f"保存IPCIDR TXT: {group_dir / 'ipcidr.txt'} ({len(ipcidr_lines)}条目)")
     
-    # 保存IPCIDR TXT格式
-    if ipcidr_lines:
-        ipcidr_txt_path = group_dir / "ipcidr.txt"
-        with open(ipcidr_txt_path, "w", encoding="utf-8") as f:
-            # 添加注释头
-            f.write(f"# NAME: {group_name}\n")
-            f.write("# AUTHOR: believems\n")
-            f.write("# TYPE: ipcidr\n")
-            f.write(f"# UPDATED: {current_time}\n")
-            f.write(f"# TOTAL: {len(ipcidr_lines)}\n")
-            # 写入规则内容
-            f.write('\n'.join(ipcidr_lines))
-        log_info(f"保存IPCIDR TXT: {ipcidr_txt_path} ({len(ipcidr_lines)}条目)")
+    # 保存sing-box配置文件
+    if singbox_rule:
+        singbox_config = {
+            "version": 3,
+            "rules": [singbox_rule]
+        }
+        singbox_content = json.dumps(singbox_config, indent=2, ensure_ascii=False)
+        (group_dir / "singbox.json").write_text(singbox_content, encoding="utf-8")
+        logger.info(f"保存sing-box配置: {group_dir / 'singbox.json'}")
+    else:
+        # 如果没有规则，仍创建空的sing-box配置
+        singbox_config = {
+            "version": 3,
+            "rules": []
+        }
+        singbox_content = json.dumps(singbox_config, indent=2, ensure_ascii=False)
+        (group_dir / "singbox.json").write_text(singbox_content, encoding="utf-8")
+        logger.info(f"保存空的sing-box配置: {group_dir / 'singbox.json'}")
 
 def process_domain_rules(lines: List[str]) -> Set[str]:
     """
@@ -504,10 +527,10 @@ def process_rule_group(name: str, files: List[str], read_files: Dict[str, List[s
     """
     sanitized = sanitize(name)
     if not sanitized or not files:
-        log_error(f"无效文件: {name}", critical=True)
+        logger.error(f"无效文件: {name}")
         return
     
-    log_info(f"处理文件: {name}")
+    logger.info(f"处理文件: {name}")
     
     # 收集所有行
     lines = set()
@@ -515,7 +538,7 @@ def process_rule_group(name: str, files: List[str], read_files: Dict[str, List[s
         lines.update(read_files.get(file_path, []))
     
     if not lines:
-        log_info(f"文件{name}无内容，跳过")
+        logger.info(f"文件{name}无内容，跳过")
         return
     
     # 提取并处理域名
@@ -541,17 +564,17 @@ def main():
     # 创建输出目录
     output_dir = Path("rules")
     output_dir.mkdir(parents=True, exist_ok=True)
-    log_info(f"输出目录: {output_dir.absolute()}")
+    logger.info(f"输出目录: {output_dir.absolute()}")
     
     # 检查domains目录是否存在
     if not DOMAINS_DIR.exists():
-        log_error(f"domains目录不存在: {DOMAINS_DIR.absolute()}", critical=True)
+        logger.error(f"domains目录不存在: {DOMAINS_DIR.absolute()}")
         return
     
     # 获取domains目录下的所有txt文件
     txt_files = list(DOMAINS_DIR.glob("*.txt"))
     if not txt_files:
-        log_error("domains目录下没有txt文件", critical=True)
+        logger.error("domains目录下没有txt文件")
         return
     
     # 并行读取所有文件
@@ -573,9 +596,9 @@ def main():
             try:
                 future.result()
             except Exception as e:
-                log_error(f"文件处理异常: {str(e)[:100]}")
+                logger.error(f"文件处理异常: {str(e)[:100]}")
     
-    log_info(f"所有处理完成，总耗时{time.time() - start_time:.2f}s")
+    logger.info(f"所有处理完成，总耗时{time.time() - start_time:.2f}s")
 
 if __name__ == "__main__":
     if mp.get_start_method(allow_none=True) != 'spawn' and sys.platform.startswith('win32'):
@@ -583,8 +606,8 @@ if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
-        log_error("用户中断")
+        logger.error("用户中断")
         sys.exit(1)
     except Exception as e:
-        log_error(f"程序终止: {str(e)[:100]}")
+        logger.error(f"程序终止: {str(e)[:100]}")
         sys.exit(1)
