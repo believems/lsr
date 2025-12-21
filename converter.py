@@ -128,7 +128,7 @@ def read_local_file(file_path: str) -> List[str]:
         with open(file_path, "r", encoding="utf-8") as f:
             return [line.rstrip('\n') for line in f if line.strip()]
     except Exception as e:
-        log(f"读取文件失败 {file_path}: {e}", critical=True)
+        log_error(f"读取文件失败 {file_path}: {e}", critical=True)
         return []
 
 def read_all_files(file_paths: List[str]) -> Dict[str, List[str]]:
@@ -152,9 +152,9 @@ def read_all_files(file_paths: List[str]) -> Dict[str, List[str]]:
             try:
                 content = future.result()
                 results[file_path] = content
-                log(f"读取完成: {file_path} ({len(content)}行)")
+                log_info(f"读取完成: {file_path} ({len(content)}行)")
             except Exception as e:
-                log(f"读取异常: {file_path} - {str(e)[:100]}", critical=True)
+                log_error(f"读取异常: {file_path} - {str(e)[:100]}", critical=True)
     
     return results
 
@@ -289,7 +289,7 @@ def remove_subdomains(domains: Set[str]) -> Set[str]:
         if not any(parent in keep for parent in get_parent_domains(domain)):
             keep.add(domain)
     
-    log(f"去重: 输入{len(domains)} → 输出{len(keep)}")
+    log_info(f"去重: 输入{len(domains)} → 输出{len(keep)}")
     return keep
 
 
@@ -321,7 +321,7 @@ def save_domains_to_files(domains: Set[str], output_path: Path, group_name: str)
         - 所有输出文件包含标准注释头: NAME, AUTHOR, TYPE, UPDATED, TOTAL
     """
     if not domains:
-        log(f"无域名保存: {output_path}")
+        log_error(f"无域名保存: {output_path}")
         return
     
     sorted_domains = sorted(domains)
@@ -342,7 +342,7 @@ def save_domains_to_files(domains: Set[str], output_path: Path, group_name: str)
         f.write(f"# TOTAL: {len(sorted_domains)}\n")
         # 写入规则内容
         f.write('\n'.join(f"||{d}^" for d in sorted_domains))
-    log(f"保存AdBlock: {adblock_path} ({len(sorted_domains)}域名)")
+    log_info(f"保存AdBlock: {adblock_path} ({len(sorted_domains)}域名)")
     
     # 统计DOMAIN-KEYWORD和DOMAIN-SUFFIX的数量
     domain_keyword_count = 0
@@ -402,7 +402,7 @@ def save_domains_to_files(domains: Set[str], output_path: Path, group_name: str)
         # 写入payload内容
         f.write("payload:\n")
         f.write('\n'.join(classical_yaml_lines))
-    log(f"保存Classical YAML: {classical_yaml_path} ({len(sorted_domains)}域名)")
+    log_info(f"保存Classical YAML: {classical_yaml_path} ({len(sorted_domains)}域名)")
     
     # 保存Classical TXT格式
     classical_txt_path = group_dir / "classical.txt"
@@ -417,7 +417,7 @@ def save_domains_to_files(domains: Set[str], output_path: Path, group_name: str)
         f.write(f"# TOTAL: {total_count}\n")
         # 写入规则内容
         f.write('\n'.join(classical_lines))
-    log(f"保存Classical TXT: {classical_txt_path} ({len(sorted_domains)}域名)")
+    log_info(f"保存Classical TXT: {classical_txt_path} ({len(sorted_domains)}域名)")
     
     # 保存Domain YAML格式
     domain_yaml_path = group_dir / "domain.yaml"
@@ -431,7 +431,7 @@ def save_domains_to_files(domains: Set[str], output_path: Path, group_name: str)
         # 写入payload内容
         f.write("payload:\n")
         f.write('\n'.join(domain_yaml_lines))
-    log(f"保存Domain YAML: {domain_yaml_path} ({len(sorted_domains)}域名)")
+    log_info(f"保存Domain YAML: {domain_yaml_path} ({len(sorted_domains)}域名)")
     
     # 保存Domain TXT格式
     domain_txt_path = group_dir / "domain.txt"
@@ -444,7 +444,7 @@ def save_domains_to_files(domains: Set[str], output_path: Path, group_name: str)
         f.write(f"# TOTAL: {total_count}\n")
         # 写入规则内容
         f.write('\n'.join(domain_lines))
-    log(f"保存Domain TXT: {domain_txt_path} ({len(sorted_domains)}域名)")
+    log_info(f"保存Domain TXT: {domain_txt_path} ({len(sorted_domains)}域名)")
     
     # 保存IPCIDR YAML格式
     if ipcidr_lines:
@@ -459,7 +459,7 @@ def save_domains_to_files(domains: Set[str], output_path: Path, group_name: str)
             # 写入payload内容
             f.write("payload:\n")
             f.write('\n'.join(ipcidr_yaml_lines))
-        log(f"保存IPCIDR YAML: {ipcidr_yaml_path} ({len(ipcidr_lines)}条目)")
+        log_info(f"保存IPCIDR YAML: {ipcidr_yaml_path} ({len(ipcidr_lines)}条目)")
     
     # 保存IPCIDR TXT格式
     if ipcidr_lines:
@@ -473,7 +473,7 @@ def save_domains_to_files(domains: Set[str], output_path: Path, group_name: str)
             f.write(f"# TOTAL: {len(ipcidr_lines)}\n")
             # 写入规则内容
             f.write('\n'.join(ipcidr_lines))
-        log(f"保存IPCIDR TXT: {ipcidr_txt_path} ({len(ipcidr_lines)}条目)")
+        log_info(f"保存IPCIDR TXT: {ipcidr_txt_path} ({len(ipcidr_lines)}条目)")
 
 def process_domain_rules(lines: List[str]) -> Set[str]:
     """
@@ -499,10 +499,10 @@ def process_rule_group(name: str, files: List[str], read_files: Dict[str, List[s
     """
     sanitized = sanitize(name)
     if not sanitized or not files:
-        log(f"无效文件: {name}", critical=True)
+        log_error(f"无效文件: {name}", critical=True)
         return
     
-    log(f"处理文件: {name}")
+    log_info(f"处理文件: {name}")
     
     # 收集所有行
     lines = set()
@@ -510,7 +510,7 @@ def process_rule_group(name: str, files: List[str], read_files: Dict[str, List[s
         lines.update(read_files.get(file_path, []))
     
     if not lines:
-        log(f"文件{name}无内容，跳过")
+        log_info(f"文件{name}无内容，跳过")
         return
     
     # 提取并处理域名
@@ -536,17 +536,17 @@ def main():
     # 创建输出目录
     output_dir = Path("rules")
     output_dir.mkdir(parents=True, exist_ok=True)
-    log(f"输出目录: {output_dir.absolute()}")
+    log_info(f"输出目录: {output_dir.absolute()}")
     
     # 检查domains目录是否存在
     if not DOMAINS_DIR.exists():
-        log(f"domains目录不存在: {DOMAINS_DIR.absolute()}", critical=True)
+        log_error(f"domains目录不存在: {DOMAINS_DIR.absolute()}", critical=True)
         return
     
     # 获取domains目录下的所有txt文件
     txt_files = list(DOMAINS_DIR.glob("*.txt"))
     if not txt_files:
-        log("domains目录下没有txt文件", critical=True)
+        log_error("domains目录下没有txt文件", critical=True)
         return
     
     # 并行读取所有文件
@@ -568,9 +568,9 @@ def main():
             try:
                 future.result()
             except Exception as e:
-                log(f"文件处理异常: {str(e)[:100]}", critical=True)
+                log_error(f"文件处理异常: {str(e)[:100]}", critical=True)
     
-    log(f"所有处理完成，总耗时{time.time() - start_time:.2f}s")
+    log_info(f"所有处理完成，总耗时{time.time() - start_time:.2f}s")
 
 if __name__ == "__main__":
     if mp.get_start_method(allow_none=True) != 'spawn' and sys.platform.startswith('win32'):
@@ -578,8 +578,8 @@ if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
-        log("用户中断", critical=True)
+        log_error("用户中断", critical=True)
         sys.exit(1)
     except Exception as e:
-        log(f"程序终止: {str(e)[:100]}", critical=True)
+        log_error(f"程序终止: {str(e)[:100]}", critical=True)
         sys.exit(1)
