@@ -50,12 +50,16 @@
 # 基础导入
 import re
 import time
+import datetime
 import logging
 import sys
 from pathlib import Path
-
-# 类型提示
 from typing import List, Set, Dict, Optional, Tuple, Iterator
+import os
+
+# 设置时区为中国标准时间
+os.environ['TZ'] = 'Asia/Shanghai'
+time.tzset()
 
 # 并发处理
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -328,8 +332,9 @@ def save_domains_to_files(domains: Set[str], output_path: Path, group_name: str)
     group_dir = output_path / group_name
     group_dir.mkdir(parents=True, exist_ok=True)
     
-    # 使用当前时间作为更新时间
-    current_time = time.strftime("%Y-%m-%d %H:%M:%S")
+    # 使用当前时间作为更新时间（中国标准时间）
+    # 中国标准时间比UTC时间快8小时
+    current_time = (datetime.datetime.utcnow() + datetime.timedelta(hours=8)).strftime("%Y-%m-%d %H:%M:%S CST")
     
     # 保存AdBlock格式
     adblock_path = group_dir / "adblock.txt"
@@ -568,7 +573,7 @@ def main():
             try:
                 future.result()
             except Exception as e:
-                log_error(f"文件处理异常: {str(e)[:100]}", critical=True)
+                log_error(f"文件处理异常: {str(e)[:100]}")
     
     log_info(f"所有处理完成，总耗时{time.time() - start_time:.2f}s")
 
@@ -578,8 +583,8 @@ if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
-        log_error("用户中断", critical=True)
+        log_error("用户中断")
         sys.exit(1)
     except Exception as e:
-        log_error(f"程序终止: {str(e)[:100]}", critical=True)
+        log_error(f"程序终止: {str(e)[:100]}")
         sys.exit(1)
