@@ -1,3 +1,8 @@
+# NAME: proxy
+# AUTHOR: believems
+# TYPE: adblock
+# UPDATED: 2025-12-21 18:32:07
+# TOTAL: 50
 ||6park.com^
 ||appraven.net^
 ||atom.io^

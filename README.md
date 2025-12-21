@@ -5,7 +5,8 @@
 ## 功能特性
 
 - 将原始域名列表转换为多种格式的分流规则
-- 支持 Clash、Loon 等客户端格式
+- 自动去重和去除子域名
+- 支持并行处理提高效率
 - 通过 GitHub Actions 自动生成 MRS 文件
 - 定期自动更新（每天 UTC 00:00）
 
@@ -28,19 +29,29 @@ lsr/
 
 ## 支持的规则格式
 
-- `clash.yaml` - Clash 配置格式
-- `clash.json` - Clash JSON 格式
-- `loon.lsr` - Loon 规则格式
-- `clash.mrs` - MRS 格式（由 GitHub Actions 自动生成）
+### 由 converter.py 直接生成：
+- `adblock.txt` - AdBlock 拦截规则格式
+- `classical.yaml` - Clash Classical YAML 格式（包含文件头和 payload 前缀）
+- `classical.txt` - Clash Classical 文本格式（不包含文件头）
+- `domain.yaml` - Domain YAML 格式（仅包含域名）
+- `domain.txt` - Domain 文本格式（仅包含域名）
+- `ipcidr.yaml` - IPCIDR YAML 格式（仅包含 IP 地址和 CIDR 范围）
+- `ipcidr.txt` - IPCIDR 文本格式（仅包含 IP 地址和 CIDR 范围）
+
+### 由 GitHub Actions 自动生成：
+- `domain.mrs` - Domain 格式的 MRS 文件
+- `ipcidr.mrs` - IPCIDR 格式的 MRS 文件
 
 ## MRS 文件生成
 
 MRS 文件是通过 GitHub Actions 自动生成的，生成流程如下：
 
-1. 每当有代码推送到 main 分支或定期（每天 UTC 00:00）
-2. CI 工作流自动运行 converter.py 生成基础规则文件
-3. 下载并使用 Mihomo 工具将 Clash YAML 转换为 MRS 格式
-4. 验证生成的文件并提交到仓库
+1. 每当有代码推送到 main 分支、创建 Pull Request 或定期（每天 UTC 00:00）
+2. CI 工作流自动运行 converter.py 生成基础规则文件（包含 classical.yaml、domain.yaml 和 ipcidr.yaml）
+3. 下载并使用 Mihomo 工具将 domain.yaml 转换为 domain.mrs
+4. 下载并使用 Mihomo 工具将 ipcidr.yaml 转换为 ipcidr.mrs
+5. 验证生成的 domain.yaml、domain.mrs、ipcidr.yaml 和 ipcidr.mrs 文件
+6. 提交并推送更改到仓库
 
 ## 使用方法
 

@@ -1,6 +1,7 @@
 # NAME: block
 # AUTHOR: believems
-# TYPE: adblock
+# TYPE: domain
 # UPDATED: 2025-12-21 18:32:07
 # TOTAL: 1
-||dc-dragate-cn.heytapmobi.com^
+payload:
+  - '.dc-dragate-cn.heytapmobi.com'

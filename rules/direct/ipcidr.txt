@@ -1,6 +1,6 @@
-# NAME: block
+# NAME: direct
 # AUTHOR: believems
-# TYPE: adblock
+# TYPE: ipcidr
 # UPDATED: 2025-12-21 18:32:07
 # TOTAL: 1
-||dc-dragate-cn.heytapmobi.com^
+192.168.123.0/24

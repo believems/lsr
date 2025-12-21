@@ -10,23 +10,33 @@
   - 支持格式: AdBlock (||example.com^), Hosts (0.0.0.0 example.com), 纯域名, 带通配符域名
 
 输出格式:
-  1. Clash YAML格式 (clash.yaml)
-     - 包含文件头(# NAME, # AUTHOR等)
-     - 规则格式: DOMAIN-SUFFIX,example.com 或 DOMAIN-KEYWORD,keyword
-     - 带payload:前缀
+  1. AdBlock格式 (adblock.txt)
+     - AdBlock拦截规则格式，以||开头，^结尾
   
-  2. Loon LSR格式 (loon.lsr)
-     - 包含文件头(# NAME, # AUTHOR等)
-     - 规则格式: DOMAIN-SUFFIX,example.com 或 DOMAIN-KEYWORD,keyword
-     - 无payload:前缀
+  2. Classical格式:
+     - classical.yaml - Clash Classical YAML格式
+       - 包含文件头(# NAME, # AUTHOR等)
+       - 规则格式: DOMAIN-SUFFIX,example.com 或 DOMAIN-KEYWORD,keyword 或 IP-CIDR,192.168.1.0/24
+       - 带payload:前缀
+     - classical.txt - Clash Classical文本格式
+       - 与yaml格式内容相同，但不包含文件头
   
-  3. JSON格式 (clash.json)
-     - 结构化数据，包含version和rules字段
-     - 分离domain_keyword和domain_suffix规则
+  3. Domain格式:
+     - domain.yaml - Domain YAML格式
+       - 仅包含域名，不包含IP地址
+       - 格式: payload: - '.example.com'
+     - domain.txt - Domain文本格式
+       - 仅包含域名，每行一个，格式: .example.com
+  
+  4. IPCIDR格式:
+     - ipcidr.yaml - IPCIDR YAML格式
+       - 仅包含IP地址和CIDR范围
+       - 格式: payload: - '192.168.1.0/24'
+     - ipcidr.txt - IPCIDR文本格式
+       - 仅包含IP地址和CIDR范围，每行一个
 
 输出目录:
   - rules/<组名>/
-  - 同时复制direct组的输出为cnpc.lsr和cnpc.json到根目录
 
 使用方法:
   python3 converter.py
@@ -144,25 +154,33 @@ def read_all_files(file_paths: List[str]) -> Dict[str, List[str]]:
     
     return results
 
-def extract_black_domain(line: str) -> Optional[str]:
+def extract_domain(line: str) -> Optional[str]:
     """
-    从黑名单规则行中提取域名
+    从规则行中提取域名或IP地址
     
     参数:
         line: 规则行字符串
     
     返回:
-        提取的域名(小写)，如果无法提取则返回None
+        提取的域名(小写)或IP地址/IP-CIDR字符串，如果无法提取则返回None
         
     支持的规则格式:
         - AdBlock: ||example.com^
         - Hosts: 0.0.0.0 example.com
         - 纯域名: example.com
         - 带通配符的域名: *.example.com
+        - IP地址: 127.0.0.1
+        - IP-CIDR范围: 127.0.0.0/8
     """
     line = line.strip()
     if not line or line.startswith('#'):
         return None
+    
+    # 匹配IP-CIDR格式: 127.0.0.0/8
+    ip_cidr_pattern = r'^(\d+\.\d+\.\d+\.\d+(?:/\d+)?)$'
+    ip_cidr_match = re.match(ip_cidr_pattern, line)
+    if ip_cidr_match:
+        return ip_cidr_match.group(1)
     
     # 匹配各种规则格式的正则表达式
     patterns = [
@@ -277,15 +295,26 @@ def save_domains_to_files(domains: Set[str], output_path: Path, group_name: str)
     将域名保存为多种格式的文件
     
     参数:
-        domains: 域名集合
+        domains: 域名集合，包含域名、IP地址和CIDR范围
         output_path: 输出目录路径
         group_name: 组名（文件名前缀）
     
     输出文件:
         1. adblock.txt - AdBlock格式
-        2. clash.yaml - Clash YAML格式
-        3. loon.lsr - Loon LSR格式
-        4. clash.json - JSON格式
+        2. classical.yaml - Clash Classical格式YAML
+        3. classical.txt - Clash Classical格式文本
+        4. domain.yaml - Domain格式YAML
+        5. domain.txt - Domain格式文本
+        6. ipcidr.yaml - IPCIDR格式YAML
+        7. ipcidr.txt - IPCIDR格式文本
+    
+    处理逻辑:
+        - 将输入的域名集合按类型分类: IP地址/CIDR范围、完整域名、关键词
+        - IP地址/CIDR范围: 输出到Classical和IPCIDR格式文件
+        - 完整域名: 输出到所有格式文件
+        - 关键词: 输出到所有格式文件
+        - IPCIDR格式文件仅在存在IP地址/CIDR范围时生成
+        - 所有输出文件包含标准注释头: NAME, AUTHOR, TYPE, UPDATED, TOTAL
     """
     if not domains:
         log(f"无域名保存: {output_path}")
@@ -295,106 +324,152 @@ def save_domains_to_files(domains: Set[str], output_path: Path, group_name: str)
     group_dir = output_path / group_name
     group_dir.mkdir(parents=True, exist_ok=True)
     
+    # 使用当前时间作为更新时间
+    current_time = time.strftime("%Y-%m-%d %H:%M:%S")
+    
     # 保存AdBlock格式
     adblock_path = group_dir / "adblock.txt"
     with open(adblock_path, "w", encoding="utf-8") as f:
+        # 添加注释头
+        f.write(f"# NAME: {group_name}\n")
+        f.write("# AUTHOR: believems\n")
+        f.write("# TYPE: adblock\n")
+        f.write(f"# UPDATED: {current_time}\n")
+        f.write(f"# TOTAL: {len(sorted_domains)}\n")
+        # 写入规则内容
         f.write('\n'.join(f"||{d}^" for d in sorted_domains))
     log(f"保存AdBlock: {adblock_path} ({len(sorted_domains)}域名)")
     
     # 统计DOMAIN-KEYWORD和DOMAIN-SUFFIX的数量
     domain_keyword_count = 0
     domain_suffix_count = 0
-    clash_payload_lines = []
-    loon_payload_lines = []
+    classical_lines = []
+    classical_yaml_lines = []
+    domain_lines = []
+    domain_yaml_lines = []
+    # IPCIDR格式专用列表，仅存储IP地址和CIDR范围
+    ipcidr_lines = []
+    ipcidr_yaml_lines = []
     
     for d in sorted_domains:
-        if '.' in d:
+        # 使用正则表达式检测是否为IP地址或CIDR范围
+        # 匹配格式: 192.168.1.1 或 192.168.1.0/24
+        is_ip_or_cidr = bool(re.match(r'^\d+\.\d+\.\d+\.\d+(?:/\d+)?$', d))
+        
+        if is_ip_or_cidr:
+            # IP地址或CIDR范围处理
+            # 添加到Classical格式
+            classical_lines.append(f"IP-CIDR,{d}")
+            classical_yaml_lines.append(f"  - IP-CIDR,{d}")
+            # IP地址不计入Domain统计
+            domain_suffix_count += 1
+            # 添加到IPCIDR格式专用列表
+            ipcidr_lines.append(f"{d}")
+            ipcidr_yaml_lines.append(f"  - '{d}'")
+        elif '.' in d:
             # 包含点号的是完整域名，使用DOMAIN-SUFFIX
-            clash_payload_lines.append(f"  - DOMAIN-SUFFIX,{d}")
-            loon_payload_lines.append(f"DOMAIN-SUFFIX,{d}")
+            classical_lines.append(f"DOMAIN-SUFFIX,{d}")
+            classical_yaml_lines.append(f"  - DOMAIN-SUFFIX,{d}")
+            domain_lines.append(f".{d}")
+            domain_yaml_lines.append(f"  - '.{d}'")
             domain_suffix_count += 1
         else:
             # 不包含点号的是关键词，使用DOMAIN-KEYWORD
-            clash_payload_lines.append(f"  - DOMAIN-KEYWORD,{d}")
-            loon_payload_lines.append(f"DOMAIN-KEYWORD,{d}")
+            classical_lines.append(f"DOMAIN-KEYWORD,{d}")
+            classical_yaml_lines.append(f"  - DOMAIN-KEYWORD,{d}")
+            # 关键词在domain格式中直接使用
+            domain_lines.append(f"{d}")
+            domain_yaml_lines.append(f"  - '{d}'")
             domain_keyword_count += 1
     
     total_count = domain_keyword_count + domain_suffix_count
-    # 使用当前时间作为更新时间
-    current_time = time.strftime("%Y-%m-%d %H:%M:%S")
     
-    # 保存Clash格式
-    clash_path = group_dir / "clash.yaml"
-    with open(clash_path, "w", encoding="utf-8") as f:
+    # 保存Classical YAML格式（原clash.yaml）
+    classical_yaml_path = group_dir / "classical.yaml"
+    with open(classical_yaml_path, "w", encoding="utf-8") as f:
         # 添加自定义文件头，NAME使用文件名（无后缀）
         f.write(f"# NAME: {group_name}\n")
         f.write("# AUTHOR: believems\n")
+        f.write("# TYPE: classical\n")
         f.write(f"# UPDATED: {current_time}\n")
         f.write(f"# DOMAIN-KEYWORD: {domain_keyword_count}\n")
         f.write(f"# DOMAIN-SUFFIX: {domain_suffix_count}\n")
         f.write(f"# TOTAL: {total_count}\n")
         # 写入payload内容
         f.write("payload:\n")
-        f.write('\n'.join(clash_payload_lines))
-    log(f"保存Clash: {clash_path} ({len(sorted_domains)}域名)")
+        f.write('\n'.join(classical_yaml_lines))
+    log(f"保存Classical YAML: {classical_yaml_path} ({len(sorted_domains)}域名)")
     
-    # 保存Loon格式，文件名固定为loon.lsr
-    loon_path = group_dir / "loon.lsr"
-    with open(loon_path, "w", encoding="utf-8") as f:
-        # 添加自定义文件头，NAME使用文件名（无后缀）
-        f.write(f"# NAME: CustomLSR-{group_name}\n")
+    # 保存Classical TXT格式
+    classical_txt_path = group_dir / "classical.txt"
+    with open(classical_txt_path, "w", encoding="utf-8") as f:
+        # 添加注释头
+        f.write(f"# NAME: {group_name}\n")
         f.write("# AUTHOR: believems\n")
+        f.write("# TYPE: classical\n")
         f.write(f"# UPDATED: {current_time}\n")
         f.write(f"# DOMAIN-KEYWORD: {domain_keyword_count}\n")
         f.write(f"# DOMAIN-SUFFIX: {domain_suffix_count}\n")
         f.write(f"# TOTAL: {total_count}\n")
-        # 直接写入规则，没有payload:行和缩进
-        f.write('\n'.join(loon_payload_lines))
-    log(f"保存Loon: {loon_path} ({len(sorted_domains)}域名)")
+        # 写入规则内容
+        f.write('\n'.join(classical_lines))
+    log(f"保存Classical TXT: {classical_txt_path} ({len(sorted_domains)}域名)")
     
-    # 保存JSON格式
-    import json
-    json_path = group_dir / "clash.json"
+    # 保存Domain YAML格式
+    domain_yaml_path = group_dir / "domain.yaml"
+    with open(domain_yaml_path, "w", encoding="utf-8") as f:
+        # 添加自定义文件头
+        f.write(f"# NAME: {group_name}\n")
+        f.write("# AUTHOR: believems\n")
+        f.write("# TYPE: domain\n")
+        f.write(f"# UPDATED: {current_time}\n")
+        f.write(f"# TOTAL: {total_count}\n")
+        # 写入payload内容
+        f.write("payload:\n")
+        f.write('\n'.join(domain_yaml_lines))
+    log(f"保存Domain YAML: {domain_yaml_path} ({len(sorted_domains)}域名)")
     
-    # 准备JSON数据结构
-    json_data = {
-        "version": 3,  # API版本号
-        "updated": time.strftime("%Y-%m-%d %H:%M:%S"),  # 文件生成时间
-        "rules": []   # 规则数组
-    }
+    # 保存Domain TXT格式
+    domain_txt_path = group_dir / "domain.txt"
+    with open(domain_txt_path, "w", encoding="utf-8") as f:
+        # 添加注释头
+        f.write(f"# NAME: {group_name}\n")
+        f.write("# AUTHOR: believems\n")
+        f.write("# TYPE: domain\n")
+        f.write(f"# UPDATED: {current_time}\n")
+        f.write(f"# TOTAL: {total_count}\n")
+        # 写入规则内容
+        f.write('\n'.join(domain_lines))
+    log(f"保存Domain TXT: {domain_txt_path} ({len(sorted_domains)}域名)")
     
-    # 将域名分离为关键词和域名后缀
-    domain_keywords = []  # 无点号的关键词
-    domain_suffixes = []  # 有点号的完整域名
+    # 保存IPCIDR YAML格式
+    if ipcidr_lines:
+        ipcidr_yaml_path = group_dir / "ipcidr.yaml"
+        with open(ipcidr_yaml_path, "w", encoding="utf-8") as f:
+            # 添加自定义文件头
+            f.write(f"# NAME: {group_name}\n")
+            f.write("# AUTHOR: believems\n")
+            f.write("# TYPE: ipcidr\n")
+            f.write(f"# UPDATED: {current_time}\n")
+            f.write(f"# TOTAL: {len(ipcidr_lines)}\n")
+            # 写入payload内容
+            f.write("payload:\n")
+            f.write('\n'.join(ipcidr_yaml_lines))
+        log(f"保存IPCIDR YAML: {ipcidr_yaml_path} ({len(ipcidr_lines)}条目)")
     
-    for d in sorted_domains:
-        if '.' in d:
-            domain_suffixes.append(d)
-        else:
-            domain_keywords.append(d)
-    
-    # 创建单个规则对象，包含所有类型的规则
-    rule = {}
-    
-    # 添加domain字段（如果有单个域名的话，当前实现中可能不会有）
-    # if single_domain:
-    #     rule["domain"] = single_domain
-    
-    # 添加domain_keyword和domain_suffix字段
-    if domain_keywords:
-        rule["domain_keyword"] = domain_keywords
-    
-    if domain_suffixes:
-        rule["domain_suffix"] = domain_suffixes
-    
-    # 如果有规则，添加到rules数组
-    if rule:
-        json_data["rules"].append(rule)
-    
-    # 写入JSON文件
-    with open(json_path, "w", encoding="utf-8") as f:
-        json.dump(json_data, f, indent=2, ensure_ascii=False)
-    log(f"保存JSON: {json_path} ({len(sorted_domains)}域名)")
+    # 保存IPCIDR TXT格式
+    if ipcidr_lines:
+        ipcidr_txt_path = group_dir / "ipcidr.txt"
+        with open(ipcidr_txt_path, "w", encoding="utf-8") as f:
+            # 添加注释头
+            f.write(f"# NAME: {group_name}\n")
+            f.write("# AUTHOR: believems\n")
+            f.write("# TYPE: ipcidr\n")
+            f.write(f"# UPDATED: {current_time}\n")
+            f.write(f"# TOTAL: {len(ipcidr_lines)}\n")
+            # 写入规则内容
+            f.write('\n'.join(ipcidr_lines))
+        log(f"保存IPCIDR TXT: {ipcidr_txt_path} ({len(ipcidr_lines)}条目)")
 
 def process_domain_rules(lines: List[str]) -> Set[str]:
     """
@@ -406,7 +481,7 @@ def process_domain_rules(lines: List[str]) -> Set[str]:
     返回:
         提取的域名集合
     """
-    return parallel_extract_domains(lines, extract_black_domain)
+    return parallel_extract_domains(lines, extract_domain)
 
 def process_rule_group(name: str, files: List[str], read_files: Dict[str, List[str]], output_dir: Path) -> None:
     """

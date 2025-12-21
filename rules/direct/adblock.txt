@@ -1,3 +1,9 @@
+# NAME: direct
+# AUTHOR: believems
+# TYPE: adblock
+# UPDATED: 2025-12-21 18:32:07
+# TOTAL: 7
+||192.168.123.0/24^
 ||cnpc^
 ||cnpc.com.cn^
 ||klszkj.com^
