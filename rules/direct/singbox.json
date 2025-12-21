@@ -1,0 +1,20 @@
+{
+  "version": 3,
+  "rules": [
+    {
+      "ip_cidr": [
+        "192.168.123.0/24"
+      ],
+      "domain_keyword": [
+        "cnpc",
+        "petrochina"
+      ],
+      "domain_suffix": [
+        "cnpc.com.cn",
+        "klszkj.com",
+        "ledupeiyou.com",
+        "vdyoo.com"
+      ]
+    }
+  ]
+}
