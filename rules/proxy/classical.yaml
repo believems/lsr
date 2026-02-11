@@ -1,10 +1,10 @@
 # NAME: proxy
 # AUTHOR: believems
 # TYPE: classical
-# UPDATED: 2026-02-11 09:58:21 CST
+# UPDATED: 2026-02-11 21:36:37 CST
 # DOMAIN-KEYWORD: 1
-# DOMAIN-SUFFIX: 49
-# TOTAL: 50
+# DOMAIN-SUFFIX: 50
+# TOTAL: 51
 payload:
   - DOMAIN-SUFFIX,6park.com
   - DOMAIN-SUFFIX,appraven.net
@@ -35,6 +35,7 @@ payload:
   - DOMAIN-SUFFIX,githubstatus.com
   - DOMAIN-SUFFIX,githubuniverse.com
   - DOMAIN-SUFFIX,githubusercontent.com
+  - DOMAIN-SUFFIX,google.com
   - DOMAIN-SUFFIX,hkpic.net
   - DOMAIN-SUFFIX,imgur.com
   - DOMAIN-SUFFIX,imgurinc.com

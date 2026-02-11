@@ -1,8 +1,8 @@
 # NAME: proxy
 # AUTHOR: believems
 # TYPE: adblock
-# UPDATED: 2026-02-11 09:58:21 CST
-# TOTAL: 50
+# UPDATED: 2026-02-11 21:36:37 CST
+# TOTAL: 51
 ||6park.com^
 ||appraven.net^
 ||atom.io^
@@ -32,6 +32,7 @@
 ||githubstatus.com^
 ||githubuniverse.com^
 ||githubusercontent.com^
+||google.com^
 ||hkpic.net^
 ||imgur.com^
 ||imgurinc.com^
