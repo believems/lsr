@@ -1,9 +1,10 @@
 # NAME: direct
 # AUTHOR: believems
 # TYPE: adblock
-# UPDATED: 2026-03-08 07:26:17 CST
-# TOTAL: 7
+# UPDATED: 2026-03-08 07:26:46 CST
+# TOTAL: 8
 ||192.168.123.0/24^
+||bing.com^
 ||cnpc^
 ||cnpc.com.cn^
 ||klszkj.com^

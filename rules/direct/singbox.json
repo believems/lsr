@@ -5,15 +5,16 @@
       "ip_cidr": [
         "192.168.123.0/24"
       ],
-      "domain_keyword": [
-        "cnpc",
-        "petrochina"
-      ],
       "domain_suffix": [
+        "bing.com",
         "cnpc.com.cn",
         "klszkj.com",
         "ledupeiyou.com",
         "vdyoo.com"
+      ],
+      "domain_keyword": [
+        "cnpc",
+        "petrochina"
       ]
     }
   ]

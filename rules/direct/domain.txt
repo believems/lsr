@@ -1,8 +1,9 @@
 # NAME: direct
 # AUTHOR: believems
 # TYPE: domain
-# UPDATED: 2026-03-08 07:26:17 CST
-# TOTAL: 7
+# UPDATED: 2026-03-08 07:26:46 CST
+# TOTAL: 8
+.bing.com
 cnpc
 .cnpc.com.cn
 .klszkj.com
