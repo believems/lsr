@@ -1,7 +1,7 @@
 # NAME: proxy
 # AUTHOR: believems
 # TYPE: domain
-# UPDATED: 2026-03-16 10:00:37 CST
+# UPDATED: 2026-03-17 09:47:52 CST
 # TOTAL: 52
 .6park.com
 .appraven.net
