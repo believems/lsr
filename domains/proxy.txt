@@ -50,3 +50,5 @@ brew.sh
 appraven.net
 google.com
 linux.do
+huggingface.co
+
