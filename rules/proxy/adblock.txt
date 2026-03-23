@@ -1,12 +1,13 @@
 # NAME: proxy
 # AUTHOR: believems
 # TYPE: adblock
-# UPDATED: 2026-03-23 09:53:51 CST
-# TOTAL: 53
+# UPDATED: 2026-03-23 20:18:20 CST
+# TOTAL: 54
 ||6park.com^
 ||appraven.net^
 ||atom.io^
 ||brew.sh^
+||claude.ai^
 ||cool18.com^
 ||dependabot.com^
 ||ghcr.io^
