@@ -1,7 +1,7 @@
 # NAME: direct
 # AUTHOR: believems
 # TYPE: adblock
-# UPDATED: 2026-04-01 10:07:46 CST
+# UPDATED: 2026-04-02 09:55:31 CST
 # TOTAL: 8
 ||192.168.123.0/24^
 ||bing.com^
