@@ -1,7 +1,7 @@
 # NAME: direct
 # AUTHOR: believems
 # TYPE: domain
-# UPDATED: 2026-04-02 09:55:31 CST
+# UPDATED: 2026-04-03 09:57:04 CST
 # TOTAL: 8
 .bing.com
 cnpc
