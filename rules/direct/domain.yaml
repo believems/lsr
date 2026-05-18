@@ -1,10 +1,9 @@
 # NAME: direct
 # AUTHOR: believems
 # TYPE: domain
-# UPDATED: 2026-05-18 10:51:16 CST
-# TOTAL: 8
+# UPDATED: 2026-05-18 21:14:01 CST
+# TOTAL: 7
 payload:
-  - '.bing.com'
   - 'cnpc'
   - '.cnpc.com.cn'
   - '.klszkj.com'
