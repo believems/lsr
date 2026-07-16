@@ -1,6 +1,6 @@
 # NAME: block
 # AUTHOR: believems
 # TYPE: adblock
-# UPDATED: 2026-07-15 09:57:52 CST
+# UPDATED: 2026-07-16 10:07:57 CST
 # TOTAL: 1
 ||dc-dragate-cn.heytapmobi.com^
