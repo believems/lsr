@@ -1,7 +1,7 @@
 # NAME: direct
 # AUTHOR: believems
 # TYPE: ipcidr
-# UPDATED: 2026-07-16 10:07:57 CST
+# UPDATED: 2026-07-17 10:10:48 CST
 # TOTAL: 1
 payload:
   - '192.168.123.0/24'
