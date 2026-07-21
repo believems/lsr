@@ -1,8 +1,8 @@
 # NAME: direct
 # AUTHOR: believems
 # TYPE: adblock
-# UPDATED: 2026-07-21 10:10:35 CST
-# TOTAL: 7
+# UPDATED: 2026-07-21 21:25:24 CST
+# TOTAL: 8
 ||192.168.123.0/24^
 ||cnpc^
 ||cnpc.com.cn^
@@ -10,3 +10,4 @@
 ||ledupeiyou.com^
 ||petrochina^
 ||vdyoo.com^
+||z.ai^

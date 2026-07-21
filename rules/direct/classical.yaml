@@ -1,10 +1,10 @@
 # NAME: direct
 # AUTHOR: believems
 # TYPE: classical
-# UPDATED: 2026-07-21 10:10:35 CST
+# UPDATED: 2026-07-21 21:25:24 CST
 # DOMAIN-KEYWORD: 2
-# DOMAIN-SUFFIX: 5
-# TOTAL: 7
+# DOMAIN-SUFFIX: 6
+# TOTAL: 8
 payload:
   - IP-CIDR,192.168.123.0/24
   - DOMAIN-KEYWORD,cnpc
@@ -13,3 +13,4 @@ payload:
   - DOMAIN-SUFFIX,ledupeiyou.com
   - DOMAIN-KEYWORD,petrochina
   - DOMAIN-SUFFIX,vdyoo.com
+  - DOMAIN-SUFFIX,z.ai
