@@ -1,7 +1,7 @@
 # NAME: direct
 # AUTHOR: believems
 # TYPE: domain
-# UPDATED: 2026-07-27 10:29:03 CST
+# UPDATED: 2026-07-28 10:04:17 CST
 # TOTAL: 8
 cnpc
 .cnpc.com.cn
