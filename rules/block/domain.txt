@@ -1,6 +1,6 @@
 # NAME: block
 # AUTHOR: believems
 # TYPE: domain
-# UPDATED: 2026-08-17 08:57:35 CST
+# UPDATED: 2026-08-18 08:55:48 CST
 # TOTAL: 1
 .dc-dragate-cn.heytapmobi.com
