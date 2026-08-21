@@ -1,7 +1,7 @@
 # NAME: proxy
 # AUTHOR: believems
 # TYPE: adblock
-# UPDATED: 2026-08-20 08:56:08 CST
+# UPDATED: 2026-08-21 09:00:16 CST
 # TOTAL: 54
 ||6park.com^
 ||appraven.net^
