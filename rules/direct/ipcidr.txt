@@ -1,6 +1,6 @@
 # NAME: direct
 # AUTHOR: believems
 # TYPE: ipcidr
-# UPDATED: 2026-09-27 11:18:16 CST
+# UPDATED: 2026-09-28 11:14:42 CST
 # TOTAL: 1
 192.168.123.0/24
