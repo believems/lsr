@@ -1,9 +1,11 @@
 # NAME: direct
 # AUTHOR: believems
 # TYPE: adblock
-# UPDATED: 2026-10-18 10:43:57 CST
-# TOTAL: 8
+# UPDATED: 2026-10-18 19:43:06 CST
+# TOTAL: 10
+||11.0.0.0/8^
 ||192.168.123.0/24^
+||bigmodel.cn^
 ||cnpc^
 ||cnpc.com.cn^
 ||klszkj.com^

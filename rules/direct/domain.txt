@@ -1,8 +1,9 @@
 # NAME: direct
 # AUTHOR: believems
 # TYPE: domain
-# UPDATED: 2026-10-18 10:43:57 CST
-# TOTAL: 8
+# UPDATED: 2026-10-18 19:43:06 CST
+# TOTAL: 10
+.bigmodel.cn
 cnpc
 .cnpc.com.cn
 .klszkj.com
