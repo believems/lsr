@@ -6,3 +6,6 @@ ledupeiyou.com
 vdyoo.com
 z.ai
 192.168.123.0/24
+11.0.0.0/8
+10.0.0/8
+bigmodel.cn
