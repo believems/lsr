@@ -1,7 +1,7 @@
 # NAME: direct
 # AUTHOR: believems
 # TYPE: domain
-# UPDATED: 2026-11-15 12:29:53 CST
+# UPDATED: 2026-11-16 12:26:59 CST
 # TOTAL: 11
 .bigmodel.cn
 cnpc
